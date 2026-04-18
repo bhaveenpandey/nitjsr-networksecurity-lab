@@ -1,0 +1,116 @@
+\documentclass[a4paper,12pt, oneside]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{caption}
+
+\geometry{margin=1in}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Practical Assignment File}
+\rhead{CS4216: Network Security Lab}
+\rfoot{Page \thepage}
+\lfoot{Bhaveen Pandey (2025PGCSIS18)}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\footrulewidth}{1pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}
+  {Experiment - \thesection}
+  {1em}
+  {}
+
+\renewcommand{\lstlistingname}{Code}
+
+\lstdefinestyle{mypython}{
+    language=Python,
+    backgroundcolor=\color{white},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{purple},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    tabsize=4,
+    captionpos=t,
+    abovecaptionskip=0pt
+}
+
+\captionsetup[lstlisting]{justification=raggedright, singlelinecheck=false}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Start: Cover Page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{
+    \begin{figure}[h]
+        \centering	
+        \includegraphics[width=1\textwidth]{assets/img/default/nitjsr-banner.png}
+    \end{figure}
+}
+
+\author{
+    \\
+    \LARGE \bf CS4216: Network Security Lab\\ \\
+    \Large \bf Practical Assignment File\\ \\
+    2nd Semester (1st Year)\\
+    M. Tech. - Information Systems Security Engineering\\
+}
+
+\date{}
+
+\maketitle
+
+\vspace{1cm}
+
+\begin{figure}[h]
+    \centering	
+    \includegraphics[height=2.4cm]{assets/img/default/nitjsr-logo.eps}
+\end{figure}
+
+\begin{center}
+Department of Computer Science and Engineering\\
+National Institute of Technology, Jamshedpur\\
+Jamshedpur-831014, India\\
+\end{center}
+
+\vspace{3cm}
+
+\begin{flushright}
+    Student Name: Bhaveen Pandey\\
+    Student Roll No: 2025PGCSIS18
+\end{flushright}
+
+\thispagestyle{empty}
+\newpage
+
+\pagenumbering{arabic}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% End: Cover Page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\include{assets/experiment/experiment-01}
+\include{assets/experiment/experiment-02}
+\include{assets/experiment/experiment-03}
+\include{assets/experiment/experiment-04}
+\include{assets/experiment/experiment-05}
+\include{assets/experiment/experiment-06}
+\include{assets/experiment/experiment-07}
+\include{assets/experiment/experiment-08}
+\include{assets/experiment/experiment-09}
+\include{assets/experiment/experiment-10}
+\include{assets/experiment/experiment-11}
+\include{assets/experiment/experiment-12}
+\include{assets/experiment/experiment-13}
+\include{assets/experiment/experiment-14}
+
+\end{document}
