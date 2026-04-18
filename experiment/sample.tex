@@ -1,0 +1,228 @@
+\section{}
+\noindent \textbf{Assignment: 01 - a}
+\hfill Date: 01/01/2025 \\
+\noindent
+\textbf{Title:} Implementation of secure socket communication using AES block cipher.
+
+\subsection*{Code}
+% \begin{lstlisting}[style=mypython, caption={.py}, label={code:A-1-a-}]
+% \end{lstlisting}
+
+\lstinputlisting[style=mypython, caption={Encryption.py}]{script/Encryption.py}
+
+\begin{lstlisting}[style=mypython, caption={TerminalMessage.py}, label={code:A-1-a-TerminalMessgae}]
+import colorama as CM
+
+terminalIcon = "[>]"
+
+def PrintTry(status:bool, message:str):
+    '''
+        TODO: Function description
+    '''
+
+    if(status):
+        statusMessage = "Success"
+        color = CM.Fore.GREEN
+    else:
+        statusMessage = "Error"
+        color = CM.Fore.RED
+
+    print(color + f"{terminalIcon} {statusMessage}: {message}")
+
+def PrintMessage(message:str):
+    '''
+        TODO: Function description
+    '''
+
+    print(CM.Fore.MAGENTA + f"{terminalIcon} {message}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={Encryption.py}, label={code:A-1-a-Encryption}]
+import os
+from dotenv import load_dotenv
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+load_dotenv()
+
+class aes:
+    AES_IV = os.getenv("AES_IV").encode()
+    AES_KEY = os.getenv("AES_KEY").encode()
+
+    def __init__(self):
+        pass
+
+    def encrypt(self, data, key=AES_KEY):
+        '''
+            Function Description
+        '''
+        data = data.encode()
+        cipher = AES.new(key, AES.MODE_CBC, self.AES_IV)
+        padded_data = pad(data, AES.block_size)
+        ciphertext = cipher.encrypt(padded_data)
+        return ciphertext
+    
+    def decrypt(self, data, key=AES_KEY):
+        '''
+            Function Description
+        '''
+        cipher = AES.new(key, AES.MODE_CBC, self.AES_IV)
+        decrypted_padded_data = cipher.decrypt(data)
+        decrypted_data = unpad(decrypted_padded_data, AES.block_size)
+        return decrypted_data.decode()
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={server.py}, label={code:A-1-a-server}]
+import socket
+import TerminalMessage as TM
+from Encryption import aes
+
+# Server Configuration
+serverConfig = {
+    "name": "NITJSR Network Security Lab",
+    "ip": "localhost",
+    "port": 8080
+}
+
+# TODO: Create socket.
+try:
+    server = socket.socket()
+    TM.PrintTry(True, "Scoket created successfully.")
+except:
+    TM.PrintTry(False, "Error: Unable to create socket.")
+    exit()
+
+# TODO: Bind the socket using the serverConfig.
+bindingConfig = (serverConfig["ip"], serverConfig["port"])
+try:
+    server.bind(bindingConfig)
+    TM.PrintTry(True, f"Success: Server binded to {bindingConfig}")
+except:
+    TM.PrintTry(False, "Error: Unable to bind socket.")
+    exit()
+
+# TODO: Config the max no of connections it can accept and start listening
+noOfConnections = 5
+try:
+    server.listen(noOfConnections)
+    TM.PrintTry(True, f"Success: Server is in listening mode with max connections: {noOfConnections}")
+except:
+    TM.PrintTry(False, "Error: Unable to start listening.")
+    exit()
+
+'''
+    TODO: Run a loop that will stop when we interupt it or an error occured, inside the loop:
+            1. Accept the new connection
+            2. Send a connection successfull message and 
+            3. Ask for his name and respond with "Welcome {name}"
+'''
+while True:
+    TM.PrintMessage("Waiting for an incomming connection.")
+
+    # Accept the incomming connection.
+    client, address = server.accept()
+    TM.PrintMessage(f"Incomming connection from {address}")
+    TM.PrintMessage(f"Connection accepted from {address}")
+
+    # TODO: Create object for AES.
+    AES = aes()
+
+    # TODO: Encrypt the message.
+    connectionSuccessfullMessage = "Success: Connected to server."
+    encryptedConnectionSuccessfullMessage = AES.encrypt(connectionSuccessfullMessage)
+
+    # Send connection successful response.    
+    client.send(encryptedConnectionSuccessfullMessage)
+
+    # TODO: Encrypt the message.
+    message = "Please provide you name."
+    encryptedMessage = AES.encrypt(message)
+
+    # Ask for name.
+    client.send(encryptedMessage)
+    
+    # Accept the name.
+    name = client.recv(1024)
+
+    # TODO: Decrypt the name.
+    decryptedName = AES.decrypt(name)
+
+    # Encrypt the welcome message.
+    welcomeMessage = f'{decryptedName}, Welcome to {serverConfig["name"]}\'s server.'
+    encryptedWelcomeMessage = AES.encrypt(welcomeMessage)
+
+    # Send welcome message.
+    client.send(encryptedWelcomeMessage)
+    
+    # Terminate the connection.
+    client.close()
+    TM.PrintMessage(f"Connection terminated from {address}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={client.py}, label={code:A-1-a-client}]
+import socket
+import TerminalMessage as TM
+from Encryption import aes
+
+# TODO: Create Socket.
+client = socket.socket()
+
+# Server configuration.
+config = {
+    "ip": "localhost",
+    "port": 8080
+}
+serverConfig = (config["ip"], config["port"])
+
+# TODO: Create object for AES.
+AES = aes()
+
+# TODO: Connect to server.
+try:
+    client.connect(serverConfig)
+    
+    # TODO: Receive the connection successfull message.
+    connectionSuccessfulMessage = client.recv(1024)
+    
+    # TODO: Decrypt the message and print.
+    decryptedConnectionSuccessfulMessage = AES.decrypt(connectionSuccessfulMessage)
+    TM.PrintTry(True, decryptedConnectionSuccessfulMessage)
+except:
+    TM.PrintTry(False, "Unable to connect to server.")
+    exit()
+
+# TODO: Receive the ask name message.
+nameMessage = client.recv(1024)
+
+# TODO: Decrypt the message and print.
+decryptedNameMessage = AES.decrypt(nameMessage)
+TM.PrintMessage(decryptedNameMessage)
+
+# TODO: Take name input and encrypt the name.
+TM.PrintMessage("Your Name Please: ")
+name = input()
+encryptedName = AES.encrypt(name)
+
+# TODO: Send encrypted name to the server.
+client.send(encryptedName)
+
+# TODO: Receive the welcome message.
+welcomeMessage = client.recv(1024)
+
+# TODO: Decrypt the message and print.
+decryptedWelcomeMessage = AES.decrypt(welcomeMessage)
+TM.PrintMessage(decryptedWelcomeMessage)
+
+# TODO: Terminate the connection.
+client.close()
+\end{lstlisting}
+
+\subsection*{Output}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/report/assignment-01/a/output.png}
+    \caption{Secure socket communication b/w server and client using AES block ciper.}
+    \label{fig:A-1-a-output}
+\end{figure}
+
+\newpage

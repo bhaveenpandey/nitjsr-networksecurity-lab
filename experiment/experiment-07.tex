@@ -1,0 +1,73 @@
+\section{}
+\noindent \textbf{Assignment: 04}
+\hfill Date: 17/02/2026 \\
+\noindent
+\textbf{Title:} Packet capturing and manipulation using Npcap tool and Scapy library.
+
+\subsection*{Code}
+
+\begin{lstlisting}[style=mypython, caption={NcapScapyScript.py}, label={code:A-4-scapy_ncap_script}]
+from scapy.all import sniff, IP, TCP, UDP, send, conf
+
+# Set network interface (Change as per your system)
+iface = "wlp22s0"
+  # Example: Linux (eth0, wlan0), Windows (Wi-Fi, Ethernet)
+
+def packet_callback(packet):
+    if packet.haslayer(IP):
+        print("\nCaptured Packet:")
+        packet.show()
+
+        # Modify Destination IP
+        original_dst = packet[IP].dst
+        new_dst = "10.14.0.147"  # Change destination IP
+
+        print(f"Original Destination: {original_dst}")
+        print(f"New Destination: {new_dst}")
+
+        packet[IP].dst = new_dst  # Modify destination IP
+        
+        # Reset checksums & recalculate length
+        del packet[IP].chksum
+        del packet[IP].len
+
+        if packet.haslayer(TCP):
+            del packet[TCP].chksum  # Corrected TCP checksum deletion
+        if packet.haslayer(UDP):
+            del packet[UDP].chksum  # Corrected UDP checksum deletion
+
+        # Send modified packet
+        print("Sending modified packet...")
+        send(packet, iface=iface, verbose=False)
+
+# Start packet sniffing
+
+print(f"Sniffing on interface: {iface}...")
+
+sniff(prn=packet_callback, filter="ip", iface=iface, count=2)
+\end{lstlisting}
+
+\subsection*{Output}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-07/output-01.png}
+    \caption{Packet capturing and manipulation using Npcap tool and Scapy library.}
+    \label{fig:A-1-a-output}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-07/output-02.png}
+    \caption{Packet capturing and manipulation using Npcap tool and Scapy library.}
+    \label{fig:A-1-a-output}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-07/output-03.png}
+    \caption{Packet capturing and manipulation using Npcap tool and Scapy library.}
+    \label{fig:A-1-a-output}
+\end{figure}
+
+\newpage

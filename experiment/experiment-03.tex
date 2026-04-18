@@ -1,0 +1,293 @@
+\section{}
+\noindent \textbf{Assignment: 02 - a}
+\hfill Date: 26/01/2026 \\
+\noindent
+\textbf{Title:} Implementation of secure socket communication with HMAC to achieve message authentication.
+
+\subsection*{Code}
+\begin{lstlisting}[style=mypython, caption={TerminalMessage.py}, label={code:A-2-a-TerminalMessage}]
+import colorama as CM
+
+terminalIcon = "[>]"
+
+def PrintTry(status:bool, message:str):
+    '''
+        TODO: Function description
+    '''
+
+    if(status):
+        statusMessage = "Success"
+        color = CM.Fore.GREEN
+    else:
+        statusMessage = "Error"
+        color = CM.Fore.RED
+
+    print(color + f"{terminalIcon} {statusMessage}: {message}")
+
+def PrintMessage(message:str):
+    '''
+        TODO: Function description
+    '''
+
+    print(CM.Fore.MAGENTA + f"{terminalIcon} {message}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={HMAC.py}, label={code:A-2-a-HMAC}]
+import os
+from Crypto.Hash import HMAC, SHA256
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def generate(message: str):
+    secret = os.getenv("HMAC_SECRET").encode()
+    encodedMessage = message.encode()
+    h = HMAC.new(secret, digestmod=SHA256)
+    h.update(encodedMessage)
+    messageDigest = h.hexdigest()
+
+    return encodedMessage, messageDigest
+
+def verify(encodedMessage, messageDigest):
+    secret = os.getenv("HMAC_SECRET").encode()
+    h = HMAC.new(secret, digestmod=SHA256)
+    h.update(encodedMessage)
+    try:
+        h.hexverify(messageDigest)
+        return True
+    except ValueError:
+        return False
+
+if __name__ == "__main__":
+    message = input("Input your message: ")
+    encodedMessage, digest = generate(message)
+    print(f"{encodedMessage}, {type(digest)}")
+
+    mymessage = input("you messgae plz: ")
+
+    print(verify(mymessage.encode(), digest))
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={server.py}, label={code:A-2-a-server}]
+import socket
+import TerminalMessage as TM
+import HMAC as H
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Server configuration.
+serverConfig = {
+    "name": os.getenv("SERVER_NAME"),
+    "ip": os.getenv("HOST"),
+    "port": os.getenv("PORT")
+}
+
+# TODO: Create socket.
+try:
+    server = socket.socket()
+    TM.PrintTry(True, "Scoket created successfully.")
+except:
+    TM.PrintTry(False, "Error: Unable to create socket.")
+    exit()
+
+# TODO: Bind the socket using the serverConfig.
+bindingConfig = (serverConfig["ip"], int(serverConfig["port"]))
+try:
+    server.bind(bindingConfig)
+    TM.PrintTry(True, f"Success: Server binded to {bindingConfig}")
+except:
+    print(bindingConfig)
+    TM.PrintTry(False, "Error: Unable to bind socket.")
+    exit()
+
+# TODO: Config the max no of connections it can accept and start listening.
+noOfConnections = 5
+try:
+    server.listen(noOfConnections)
+    TM.PrintTry(True, f"Success: Server is in listening mode with max connections: {noOfConnections}")
+except:
+    TM.PrintTry(False, "Error: Unable to start listening.")
+    exit()
+
+'''
+    TODO: Run a loop that will stop when we interupt it or an error occured, inside the loop:
+            1. Accept the new connection
+            2. Send connection successful message with digest
+            3. Ask for his name, send message with digest
+            4. Receive his name with digest
+            5. Respond with welcome message and digest.
+'''
+while True:
+    TM.PrintMessage("Waiting for an incomming connection.")
+
+    # Accept the incomming connection.
+    client, address = server.accept()
+    TM.PrintMessage(f"Incomming connection from {address}")
+    TM.PrintMessage(f"Connection accepted from {address}")
+
+    # Send connection successful response.
+    connectionSuccessfulMessage = "Successfully connected to server."
+    encodedConnectionSuccessfulMessage, messageDigest = H.generate(connectionSuccessfulMessage)
+    encodedMessageDigest = messageDigest.encode()
+
+    length = len(encodedConnectionSuccessfulMessage).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedConnectionSuccessfulMessage)
+
+    length = len(encodedMessageDigest).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessageDigest)
+
+    # Ask for name.
+    message = "Please provide you name."
+    encodedMessage, messageDigest = H.generate(message)
+    encodedMessageDigest = messageDigest.encode()
+
+    length = len(encodedMessage).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessage)
+
+    length = len(encodedMessageDigest).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessageDigest)
+
+    # Accept the name.
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedName = client.recv(length)
+
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedNameDigest = client.recv(length)
+
+    if(H.verify(encodedName, encodedNameDigest.decode())):
+        # TODO: need to do something.
+        # Send welcome message.
+        welcomeMessage = f'{encodedName.decode()}, Welcome to {serverConfig["name"]}\'s server.'
+        encodedWelcomeMessage, welcomeMessageDigest = H.generate(welcomeMessage)
+        encodedWelcomeMessageDigest = welcomeMessageDigest.encode()
+
+        length = len(encodedWelcomeMessage).to_bytes(4, byteorder='big')
+        client.send(length)
+        client.send(encodedWelcomeMessage)
+
+        length = len(encodedWelcomeMessageDigest).to_bytes(4, byteorder='big')
+        client.send(length)
+        client.send(encodedWelcomeMessageDigest)
+    else:
+        # TODO: need to improve it.
+        TM.PrintMessage("Error: This response is tampered.")
+        exit()
+
+    # Terminate the connection.
+    client.close()
+    TM.PrintMessage(f"Connection terminated from {address}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={client.py}, label={code:A-2-a-client}]
+import socket
+import TerminalMessage as TM
+import HMAC as H
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# TODO: Create socket.
+client = socket.socket()
+
+# Server configuration.
+config = {
+    "ip": os.getenv("HOST"),
+    "port": int(os.getenv("PORT"))
+}
+serverConfig = (config["ip"], config["port"])
+
+# TODO: Connect to server.
+try:
+    client.connect(serverConfig)
+
+    # TODO: Receive the connection successful message and digest.
+
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedConnectionSuccessfulMessage = client.recv(length)
+
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedConnectionSuccessfulMessageDigest = client.recv(length)
+
+    print(encodedConnectionSuccessfulMessage, encodedConnectionSuccessfulMessageDigest )
+    if(H.verify(encodedConnectionSuccessfulMessage, encodedConnectionSuccessfulMessageDigest.decode())):
+        TM.PrintTry(True, encodedConnectionSuccessfulMessage.decode())
+    else:
+        # TODO: check a better option other then exit.
+        TM.PrintMessage("Error 01: This message is tampered.")
+        exit()
+except:
+    TM.PrintTry(False, "Unable to connect to server.")
+    exit()
+
+# TODO: Receive the ask name message and digest.
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedNameMessage = client.recv(length)
+
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedNameMessageDigest = client.recv(length)
+
+if(H.verify(encodedNameMessage, encodedNameMessageDigest.decode())):
+    TM.PrintMessage(encodedNameMessage.decode())
+else:
+    # TODO: check a better option other then exit.
+    TM.PrintMessage("Error: This message is tampered.")
+    exit()
+
+# TODO: Take name input.
+TM.PrintMessage("Your Name Please: ")
+name = input()
+
+# TODO: Send name and digest to the server.
+encodedName, nameDigest = H.generate(name)
+encodedNameDigest = nameDigest.encode()
+
+length = len(encodedName).to_bytes(4, byteorder='big')
+client.send(length)
+client.send(encodedName)
+
+length = len(encodedNameDigest).to_bytes(4, byteorder='big')
+client.send(length)
+client.send(encodedNameDigest)
+
+# TODO: Print the welcome message.
+
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedWelcomeMessage = client.recv(length)
+
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedWelcomeMessageDigest = client.recv(length)
+if(H.verify(encodedWelcomeMessage, encodedWelcomeMessageDigest.decode())):
+    TM.PrintMessage(encodedWelcomeMessage.decode())
+else:
+    # TODO: check a better option other then exit.
+    TM.PrintMessage("Error: This message is tampered.")
+    exit()
+
+# TODO: Terminate the connection.
+client.close()
+\end{lstlisting}
+
+\subsection*{Output}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-03/output.png}
+    \caption{Secure socket communication b/w server and client with HMAC to achieve message authentication.}
+    \label{fig:A-2-a-output}
+\end{figure}
+
+\newpage

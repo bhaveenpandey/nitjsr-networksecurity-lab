@@ -1,0 +1,208 @@
+\section{}
+\noindent \textbf{Assignment: 01 - b}
+\hfill Date: 19/01/2026 \\
+\noindent
+\textbf{Title:} Implementation of secure socket communication using RSA asymmetric cipher.
+
+\subsection*{Code}
+\begin{lstlisting}[style=mypython, caption={TerminalMessage.py}, label={code:A-1-b-TerminalMessage}]
+import colorama as CM
+
+terminalIcon = "[>]"
+
+def PrintTry(status:bool, message:str):
+    '''
+        TODO: Function description
+    '''
+
+    if(status):
+        statusMessage = "Success"
+        color = CM.Fore.GREEN
+    else:
+        statusMessage = "Error"
+        color = CM.Fore.RED
+
+    print(color + f"{terminalIcon} {statusMessage}: {message}")
+
+def PrintMessage(message:str):
+    '''
+        TODO: Function description
+    '''
+
+    print(CM.Fore.MAGENTA + f"{terminalIcon} {message}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={Encryption.py}, label={code:A-1-b-Encryption}]
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+class rsa:
+    def generateKeys(self):
+        key = RSA.generate(1024)
+        privateKey = key
+        publicKey = key.publickey()
+        return(publicKey, privateKey)
+
+    def encrypt(self, data, publicKey):
+        cipher = PKCS1_OAEP.new(publicKey)
+        ciphertext = cipher.encrypt(data.encode())
+        return ciphertext
+
+    def decrypt(self, data, privateKey):
+        cipher = PKCS1_OAEP.new(privateKey)
+        plaintext = cipher.decrypt(data)
+        return plaintext.decode("utf-8")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={server.py}, label={code:A-1-b-server}]
+import socket
+import TerminalMessage as TM
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+# Server configuration.
+serverConfig = {
+    "name": "NITJSR Network Security Lab",
+    "ip": "localhost",
+    "port": 8080
+}
+
+# TODO: Create socket.
+try:
+    server = socket.socket()
+    TM.PrintTry(True, "Scoket created successfully.")
+except:
+    TM.PrintTry(False, "Error: Unable to create socket.")
+    exit()
+
+# TODO: Bind the socket using the serverConfig.
+bindingConfig = (serverConfig["ip"], serverConfig["port"])
+try:
+    server.bind(bindingConfig)
+    TM.PrintTry(True, f"Success: Server binded to {bindingConfig}")
+except:
+    TM.PrintTry(False, "Error: Unable to bind socket.")
+    exit()
+
+# TODO: Config the max no of connections it can accept and start listening.
+noOfConnections = 5
+try:
+    server.listen(noOfConnections)
+    TM.PrintTry(True, f"Success: Server is in listening mode with max connections: {noOfConnections}")
+except:
+    TM.PrintTry(False, "Error: Unable to start listening.")
+    exit()
+
+'''
+    TODO: Run a loop that will stop when we interupt it or an error occured, inside the loop:
+            1. Accept the new connection
+            2. Send connection successful message
+            3. Generate RSA keys
+            4. Send public key to client
+            5. Ask for his name and respond with "Welcome {name}"
+'''
+while True:
+    TM.PrintMessage("Waiting for an incomming connection.")
+
+    # Accept the incomming connection.
+    client, address = server.accept()
+    TM.PrintMessage(f"Incomming connection from {address}")
+    TM.PrintMessage(f"Connection accepted from {address}")
+
+    # Send connection successful response.    
+    connectionSuccessfulMessage = "Success: Connected to server.".encode()
+    client.send(connectionSuccessfulMessage)
+
+    # TODO: Generate RSA keys.
+    key = RSA.generate(1024)
+    privateKey = key
+    publicKey = key.publickey()
+    rawPublicKey = publicKey.exportKey()
+    cipher = PKCS1_OAEP.new(privateKey)
+
+    # TODO: Send public key to the client.
+    client.send(rawPublicKey)   
+
+    # Ask for name.
+    message = "Please provide you name.".encode()
+    client.send(message)
+    
+    # Accept the name.
+    name = client.recv(1024)
+
+    # TODO: Decrypt the name.
+    decryptedName = cipher.decrypt(name).decode()
+
+    # Send welcome message.
+    welcomeMessage = f'{decryptedName}, Welcome to {serverConfig["name"]}\'s server.'.encode()
+    client.send(welcomeMessage)
+    
+    # Terminate the connection.
+    client.close()
+    TM.PrintMessage(f"Connection terminated from {address}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={client.py}, label={code:A-1-b-client}]
+import socket
+import TerminalMessage as TM
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+# TODO: Create socket.
+client = socket.socket()
+
+# Server configuration.
+config = {
+    "ip": "localhost",
+    "port": 8080
+}
+serverConfig = (config["ip"], config["port"])
+
+# TODO: Connect to server.
+try:
+    client.connect(serverConfig)
+    
+    # TODO: Receive the connection successful message.
+    connectionSuccessfulMessage = client.recv(1024).decode()
+    TM.PrintTry(True, connectionSuccessfulMessage)
+
+    # TODO: Receive the RSA public key.
+    receivedPublicKey = client.recv(1024)
+    publicKey = RSA.import_key(receivedPublicKey)
+    TM.PrintTry(True, "Received public key for RSA")
+except:
+    TM.PrintTry(False, "Unable to connect to server.")
+    exit()
+
+# Create object for RSA.
+cipher = PKCS1_OAEP.new(publicKey)
+
+# TODO: Receive the ask name message and print.
+nameMessage = client.recv(1024).decode()
+TM.PrintMessage(nameMessage)
+
+# TODO: Take name input and encrypt the name.
+TM.PrintMessage("Your Name Please: ")
+name = input()
+encryptedName = cipher.encrypt(name.encode())
+
+# TODO: Send encrypted name to the server.
+client.send(encryptedName)
+
+# TODO: Print the welcome message.
+welcomeMessage = client.recv(1024)
+TM.PrintMessage(welcomeMessage.decode())
+
+# TODO: Terminate the connection.
+client.close()
+\end{lstlisting}
+
+\subsection*{Output}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-02/output.png}
+    \caption{Secure socket communication b/w server and client using RSA asymmetric cipher.}
+    \label{fig:A-1-b-output}
+\end{figure}
+
+\newpage

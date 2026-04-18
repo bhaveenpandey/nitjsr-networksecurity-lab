@@ -1,0 +1,299 @@
+\section{}
+\noindent \textbf{Assignment: 02 - b}
+\hfill Date: 26/01/2026 \\
+\noindent
+\textbf{Title:} Implementation of secure socket communication with DSS signature
+scheme for origin authentication.
+
+\subsection*{Code}
+\begin{lstlisting}[style=mypython, caption={TerminalMessage.py}, label={code:A-2-b-TerminalMessage}]
+import colorama as CM
+
+terminalIcon = "[>]"
+
+def PrintTry(status:bool, message:str):
+    '''
+        TODO: Function description
+    '''
+
+    if(status):
+        statusMessage = "Success"
+        color = CM.Fore.GREEN
+    else:
+        statusMessage = "Error"
+        color = CM.Fore.RED
+
+    print(color + f"{terminalIcon} {statusMessage}: {message}")
+
+def PrintMessage(message:str):
+    '''
+        TODO: Function description
+    '''
+
+    print(CM.Fore.MAGENTA + f"{terminalIcon} {message}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={DSS.py}, label={code:A-2-b-DSS}]
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import ECC
+from Crypto.Signature import DSS
+
+def generateKeyPair():
+    key = ECC.generate(curve='p256')
+    privateKey = key
+    publicKey = key.public_key()
+    return publicKey, privateKey
+
+def generateSignature(message, privateKey):
+    # message = b'I give my permission to order #4355'
+    # key = ECC.generate(curve='p256')
+    # key = ECC.import_key(open('privkey.der').read())
+    h = SHA256.new(message.encode())
+    signer = DSS.new(privateKey, 'fips-186-3')
+    signature = signer.sign(h)
+    return signature
+
+def verifySignature(message, signature, publicKey):
+    h = SHA256.new(message.encode())
+    verifier = DSS.new(publicKey, 'fips-186-3')
+    try:
+        verifier.verify(h, signature)
+        return True
+    except ValueError:
+        return False
+
+if __name__ == "__main__":
+    message = input("Your message plz: ")
+    privateKey = ECC.generate(curve='p256')
+    publicKey = privateKey.public_key()
+    print(publicKey)
+    pkey = publicKey.export_key(format='PEM')
+    publicKeyOther = ECC.import_key(pkey, curve_name='p256')
+    print(publicKeyOther)
+
+    print(publicKeyOther == publicKey)
+
+
+    signature = generateSignature(message, privateKey)
+    # print(signature)
+
+    print(verifySignature(message, signature, publicKeyOther))
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={server.py}, label={code:A-2-b-server}]
+import socket
+import TerminalMessage as TM
+import DSS as Sign
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Server configuration.
+serverConfig = {
+    "name": os.getenv("SERVER_NAME"),
+    "ip": os.getenv("HOST"),
+    "port": os.getenv("PORT")
+}
+
+# TODO: Create socket.
+try:
+    server = socket.socket()
+    TM.PrintTry(True, "Scoket created successfully.")
+except:
+    TM.PrintTry(False, "Error: Unable to create socket.")
+    exit()
+
+# TODO: Bind the socket using the serverConfig.
+bindingConfig = (serverConfig["ip"], int(serverConfig["port"]))
+try:
+    server.bind(bindingConfig)
+    TM.PrintTry(True, f"Success: Server binded to {bindingConfig}")
+except:
+    print(bindingConfig)
+    TM.PrintTry(False, "Error: Unable to bind socket.")
+    exit()
+
+# TODO: Config the max no of connections it can accept and start listening.
+noOfConnections = 5
+try:
+    server.listen(noOfConnections)
+    TM.PrintTry(True, f"Success: Server is in listening mode with max connections: {noOfConnections}")
+except:
+    TM.PrintTry(False, "Error: Unable to start listening.")
+    exit()
+
+'''
+    TODO: Run a loop that will stop when we interupt it or an error occured, inside the loop:
+            1. Accept the new connection
+            2. Send the public key to the client
+            2. Send connection successful message with signature
+            3. Ask for his name, send message with signature
+            4. Receive his name
+            5. Respond with welcome message and signature.
+'''
+while True:
+    TM.PrintMessage("Waiting for an incomming connection.")
+
+    # Accept the incomming connection.
+    client, address = server.accept()
+    TM.PrintMessage(f"Incomming connection from {address}")
+    TM.PrintMessage(f"Connection accepted from {address}")
+
+    publicKey, privateKey = Sign.generateKeyPair()
+    encodedPublicKey = publicKey.export_key(format='PEM').encode()
+
+    # TODO: Send the public key to the client
+    length = len(encodedPublicKey).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedPublicKey)
+
+    # Send connection successful response.
+    message = "Successfully connected to server."
+    encodedMessageSignature = Sign.generateSignature(message, privateKey)
+
+    length = len(message.encode()).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(message.encode())
+
+    length = len(encodedMessageSignature).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessageSignature)
+
+    # Ask for name.
+    message = "Please provide you name."
+    encodedMessageSignature = Sign.generateSignature(message, privateKey)
+
+    length = len(message.encode()).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(message.encode())
+
+    length = len(encodedMessageSignature).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessageSignature)
+
+    # Accept the name.
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedName = client.recv(length)
+
+    # Send welcome message.
+    message = f'{encodedName.decode()}, Welcome to {serverConfig["name"]}\'s server.'
+    encodedMessageSignature = Sign.generateSignature(message, privateKey)
+
+    length = len(message.encode()).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(message.encode())
+
+    length = len(encodedMessageSignature).to_bytes(4, byteorder='big')
+    client.send(length)
+    client.send(encodedMessageSignature)
+
+    # Terminate the connection.
+    client.close()
+    TM.PrintMessage(f"Connection terminated from {address}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=mypython, caption={client.py}, label={code:A-2-b-client}]
+import socket
+import TerminalMessage as TM
+import DSS as Sign
+from Crypto.PublicKey import ECC
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# TODO: Create socket.
+client = socket.socket()
+
+# Server configuration.
+config = {
+    "ip": os.getenv("HOST"),
+    "port": int(os.getenv("PORT"))
+}
+serverConfig = (config["ip"], config["port"])
+
+# TODO: Connect to server.
+try:
+    client.connect(serverConfig)
+
+    # TODO: Receive the public key and import it
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedPublicKey = client.recv(length)
+    publicKey = ECC.import_key(encodedPublicKey, curve_name='p256')
+
+    # TODO: Receive the connection successful message and signature.
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedMessage = client.recv(length)
+
+    receivedLength = client.recv(4)
+    length = int.from_bytes(receivedLength, byteorder='big')
+    encodedMessageSignature = client.recv(length)
+
+    if(Sign.verifySignature(encodedMessage.decode(), encodedMessageSignature, publicKey)):
+        TM.PrintTry(True, encodedMessage.decode())
+    else:
+        # TODO: check a better option other then exit.
+        TM.PrintMessage("Error: This message is not from authenticated origin.")
+        exit()
+except:
+    TM.PrintTry(False, "Unable to connect to server.")
+    exit()
+
+# TODO: Receive the ask name message and signature.
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedMessage = client.recv(length)
+
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedMessageSignature = client.recv(length)
+
+if(Sign.verifySignature(encodedMessage.decode(), encodedMessageSignature, publicKey)):
+    TM.PrintMessage(encodedMessage.decode())
+else:
+    # TODO: check a better option other then exit.
+    TM.PrintMessage("Error: This message is not from authenticated origin.")
+    exit()
+
+# TODO: Take name input.
+TM.PrintMessage("Your Name Please: ")
+name = input()
+
+# TODO: Send name to the server.
+length = len(name.encode()).to_bytes(4, byteorder='big')
+client.send(length)
+client.send(name.encode())
+
+# TODO: Print the welcome message.
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedMessage = client.recv(length)
+
+receivedLength = client.recv(4)
+length = int.from_bytes(receivedLength, byteorder='big')
+encodedMessageSignature = client.recv(length)
+
+if(Sign.verifySignature(encodedMessage.decode(), encodedMessageSignature, publicKey)):
+    TM.PrintMessage(encodedMessage.decode())
+else:
+    # TODO: check a better option other then exit.
+    TM.PrintMessage("Error: This message is not from authenticated origin.")
+    exit()
+
+# TODO: Terminate the connection.
+client.close()
+\end{lstlisting}
+
+\subsection*{Output}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{assets/img/experiment-04/output.png}
+    \caption{Secure socket communication b/w server and client with DSS signature schema for origin authentication.}
+    \label{fig:A-2-b-output}
+\end{figure}
+
+\newpage
